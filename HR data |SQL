@@ -1,0 +1,210 @@
+create database hr;
+use hr;
+
+DROP TABLE IF EXISTS `countries`;
+CREATE TABLE `countries` (
+  `country_id` char(2) NOT NULL,
+  `country_name` varchar(40) DEFAULT NULL,
+  `region_id` int unsigned NOT NULL,
+  PRIMARY KEY (`country_id`),
+  KEY `region_id` (`region_id`),
+  CONSTRAINT `countries_ibfk_1` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `departments` (
+  `department_id` int unsigned NOT NULL,
+  `department_name` varchar(30) NOT NULL,
+  `manager_id` int unsigned DEFAULT NULL,
+  `location_id` int unsigned DEFAULT NULL,
+  PRIMARY KEY (`department_id`),
+  KEY `location_id` (`location_id`),
+  KEY `manager_id` (`manager_id`),
+  CONSTRAINT `departments_ibfk_1` FOREIGN KEY (`location_id`) REFERENCES `locations` (`location_id`),
+  CONSTRAINT `departments_ibfk_2` FOREIGN KEY (`manager_id`) REFERENCES `employees` (`employee_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `employees` (
+  `employee_id` int unsigned NOT NULL,
+  `first_name` varchar(20) DEFAULT NULL,
+  `last_name` varchar(25) NOT NULL,
+  `email` varchar(25) NOT NULL,
+  `phone_number` varchar(20) DEFAULT NULL,
+  `hire_date` date NOT NULL,
+  `job_id` varchar(10) NOT NULL,
+  `salary` decimal(8,2) NOT NULL,
+  `commission_pct` decimal(2,2) DEFAULT NULL,
+  `manager_id` int unsigned DEFAULT NULL,
+  `department_id` int unsigned DEFAULT NULL,
+  PRIMARY KEY (`employee_id`),
+  KEY `job_id` (`job_id`),
+  KEY `department_id` (`department_id`),
+  KEY `manager_id` (`manager_id`),
+  CONSTRAINT `employees_ibfk_1` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`job_id`),
+  CONSTRAINT `employees_ibfk_2` FOREIGN KEY (`department_id`) REFERENCES `departments` (`department_id`),
+  CONSTRAINT `employees_ibfk_3` FOREIGN KEY (`manager_id`) REFERENCES `employees` (`employee_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `job_history` (
+  `employee_id` int unsigned NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `job_id` varchar(10) NOT NULL,
+  `department_id` int unsigned NOT NULL,
+  UNIQUE KEY `employee_id` (`employee_id`,`start_date`),
+  KEY `job_id` (`job_id`),
+  KEY `department_id` (`department_id`),
+  CONSTRAINT `job_history_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`),
+  CONSTRAINT `job_history_ibfk_2` FOREIGN KEY (`job_id`) REFERENCES `jobs` (`job_id`),
+  CONSTRAINT `job_history_ibfk_3` FOREIGN KEY (`department_id`) REFERENCES `departments` (`department_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `jobs` (
+  `job_id` varchar(10) NOT NULL,
+  `job_title` varchar(35) NOT NULL,
+  `min_salary` decimal(8,0) unsigned DEFAULT NULL,
+  `max_salary` decimal(8,0) unsigned DEFAULT NULL,
+  PRIMARY KEY (`job_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `locations` (
+  `location_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `street_address` varchar(40) DEFAULT NULL,
+  `postal_code` varchar(12) DEFAULT NULL,
+  `city` varchar(30) NOT NULL,
+  `state_province` varchar(25) DEFAULT NULL,
+  `country_id` char(2) NOT NULL,
+  PRIMARY KEY (`location_id`),
+  KEY `country_id` (`country_id`),
+  CONSTRAINT `locations_ibfk_1` FOREIGN KEY (`country_id`) REFERENCES `countries` (`country_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3201 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+-- 1.   Number of employees in each department
+
+SELECT 
+    department_name, COUNT(employee_id) AS no_employees
+FROM
+    employees e
+        JOIN
+    departments d ON e.department_id = d.department_id
+GROUP BY 1
+ORDER BY no_employees desc;
+
+-- 2. What are the total departments.
+
+SELECT 
+    COUNT(department_id) AS counts
+FROM
+    departments;
+    
+-- 3. Department name where employees are working
+
+SELECT 
+    department_name
+FROM
+    employees e
+        JOIN
+    departments d USING (department_id)
+GROUP BY department_name;
+
+-- 4. list all employees working for marketing department
+
+SELECT 
+    department_name, employee_id
+FROM
+    employees e
+        JOIN
+    departments d USING (department_id)
+WHERE
+    department_name = 'marketing';
+    
+-- 5. Department name where employees are working and blank as well
+
+
+SELECT 
+    department_name, COUNT(employee_id) as counts
+FROM
+    employees e
+        RIGHT JOIN
+    departments d ON e.department_id = d.department_id
+GROUP BY 1
+order by counts desc;
+
+-- 6. Write a query to identify the list of names of employees 
+-- who are not assigned any work and also the list of departments that are
+-- unstaffed so that the employees can be utilised to staff the departments."
+
+SELECT 
+    first_name, last_name, department_name
+FROM
+    employees e
+        LEFT JOIN
+    departments d ON e.department_id = d.department_id 
+UNION SELECT 
+    first_name, last_name, department_name
+FROM
+    employees e
+        RIGHT JOIN
+    departments d ON e.department_id = d.department_id;
+    
+-- 7. list all employees working for marketing department
+
+SELECT 
+    department_name, employee_id
+FROM
+    employees e
+        JOIN
+    departments d USING (department_id)
+WHERE
+    department_name = 'marketing';
+    
+    
+-- 8. Write a query to display the employee_id, employee name (first and last), 
+-- salary for all employees who earn more than the average salary of an orgainisation
+
+
+SELECT 
+    employee_id, first_name, last_name, salary
+FROM
+    employees
+WHERE
+    salary > (SELECT 
+            AVG(salary)
+        FROM
+            employees);
+            
+-- 9. list only the department name atleast somebody is working
+
+SELECT 
+    department_name
+FROM
+    departments
+WHERE
+    department_id IN (SELECT DISTINCT
+            department_id
+        FROM
+            employees
+        WHERE
+            department_id IS NOT NULL);
+
+-- 10. Find the senior most employee for each department
+
+SELECT 
+    first_name, department_id, hire_date
+FROM
+    employees
+WHERE
+    (department_id , hire_date) IN (SELECT 
+            department_id, MIN(hire_date)
+        FROM
+            employees
+        GROUP BY department_id); 
+        
+-- 11. DISPLAY THE FIRST_JOB AND PROMOTED JOB FOR EMPLOYEE
+
+
+select * from 
+(select employee_id, job_id as first_job,lead(job_id)over(partition by employee_id order by start_date asc)
+promoted_job from job_history)temp
+where promoted_job is not null;
